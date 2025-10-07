@@ -1,6 +1,9 @@
+const handleBtnClick = ()=>{
+    alert(window.location.href)
+}
+
 const createBtn = () => {
     const btnExists = document.getElementById("edu-ai")
-
     if (!btnExists) {
         const right_ctrls = document.getElementsByClassName("ytp-right-controls")[0]
         const btn = document.createElement("button")
@@ -17,14 +20,12 @@ const createBtn = () => {
         right_ctrls.insertBefore(btn, right_ctrls.firstChild)
 
         const ourBtn = document.getElementById("edu-ai")
-        ourBtn.addEventListener("click", () => {
-            alert("Clicked")
-        })
+        ourBtn.addEventListener("click", ()=>{handleBtnClick()})
     }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.isActive) {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg?.isActive) {
         createBtn()
     }
 })
