@@ -1,5 +1,6 @@
-const handleBtnClick = ()=>{
-    alert(window.location.href)
+const handleBtnClick = async () => {
+    // send message to background.js, get the video done and come here..
+    await chrome.runtime.sendMessage({ isActive: true, url: window.location.href, name:"upload" });
 }
 
 const createBtn = () => {
@@ -20,7 +21,7 @@ const createBtn = () => {
         right_ctrls.insertBefore(btn, right_ctrls.firstChild)
 
         const ourBtn = document.getElementById("edu-ai")
-        ourBtn.addEventListener("click", ()=>{handleBtnClick()})
+        ourBtn.addEventListener("click", () => { handleBtnClick() })
     }
 }
 
