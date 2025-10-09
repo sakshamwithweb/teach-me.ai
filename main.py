@@ -64,7 +64,7 @@ def task():
     return {"success": False}
 
 
-# Unverified..
+# Verified..
 @app.route("/is_parsed", methods=['POST']) # Since there is no callback that tells us the video is parsed, we will have to do polling (from extension)
 @cross_origin()
 def is_parsed():
