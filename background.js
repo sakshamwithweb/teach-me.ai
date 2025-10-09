@@ -20,7 +20,26 @@ const handleUploadVid = async (url) => {
     if (res1?.success) {
         console.log("Got task id")
         const taskId = res1.task_id
-        const get_task = async () => {
+        let videoNo;
+
+        const isParse = async () => {
+            const req3 = await fetch(`${serverUrl}/is_parsed`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ videoNo })
+            })
+            const res3 = await req3.json()
+
+            if(res3.success){
+                console.log("Parsed..")
+                return
+            }
+            setTimeout(() => isParse(), 3000);
+        }
+
+        const getTask = async () => {
             const req2 = await fetch(`${serverUrl}/task`, { // It will take task id and when video will be uploaded then it will give video no.
                 method: 'POST',
                 headers: {
@@ -30,14 +49,15 @@ const handleUploadVid = async (url) => {
             })
             const res2 = await req2.json()
             if (res2?.success && res2.video_no) {
-                const videoNo = res2.video_no
                 console.log("Got video No")
+                videoNo = res2.video_no
                 // Check is it parsed?
+                await isParse()
                 return
             }
-            setTimeout(() => get_task(), 3000);
+            setTimeout(() => getTask(), 3000);
         }
-        get_task()
+        getTask()
     }
 }
 
