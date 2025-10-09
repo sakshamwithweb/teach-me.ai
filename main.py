@@ -42,7 +42,7 @@ def upload():
         json={
             "video_urls": [url],
             "unique_id": "default",
-            "callback_url": "https://unulcerous-unelating-andra.ngrok-free.dev/memories-callback",
+            "callback_url": os.getenv("CALLBACK"),
         },
         headers=headers
     )
