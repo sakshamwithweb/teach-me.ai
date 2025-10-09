@@ -6,7 +6,7 @@ const handleActiveTab = async (tabId) => {
 }
 
 const handleUploadVid = async (url) => {
-    const serverUrl = "http://127.0.0.1:5000"
+    const serverUrl = "https://unulcerous-unelating-andra.ngrok-free.dev"
     console.log("Started")
     // Upload the video
     const req1 = await fetch(`${serverUrl}/upload`, { // It will initiate upload and give a task id
@@ -18,6 +18,7 @@ const handleUploadVid = async (url) => {
     })
     const res1 = await req1.json()
     if (res1?.success) {
+        console.log("Got task id")
         const taskId = res1.task_id
         const get_task = async () => {
             const req2 = await fetch(`${serverUrl}/task`, { // It will take task id and when video will be uploaded then it will give video no.
@@ -28,12 +29,13 @@ const handleUploadVid = async (url) => {
                 body: JSON.stringify({ taskId })
             })
             const res2 = await req2.json()
-            if (res2?.success && res2.videos.length > 0) {
+            if (res2?.success && res2.video_no) {
+                const videoNo = res2.video_no
+                console.log("Got video No")
                 // Check is it parsed?
-                console.log(res2.videos[0])
                 return
             }
-            setTimeout(() => get_task(), 5000);
+            setTimeout(() => get_task(), 3000);
         }
         get_task()
     }
