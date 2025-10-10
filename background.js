@@ -33,7 +33,7 @@ const handleUploadVid = async (url) => {
             const res3 = await req3.json()
 
             if(res3.success){
-                console.log("Parsed..")
+                console.log("Parsed..") // In future, we may want to save url and videoNo in db to prevent duplicacy
                 return
             }
             setTimeout(() => isParse(), 3000);
