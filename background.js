@@ -18,6 +18,12 @@ const handleUploadVid = async (url) => {
     })
     const res1 = await req1.json()
     if (res1?.success) {
+        if (res1?.exist){
+            // Since it exist for a long time, I think we can say it is parsed
+            console.log("Got video No")
+            console.log("Parsed..")
+            return
+        }
         console.log("Got task id")
         const taskId = res1.task_id
         let videoNo;
