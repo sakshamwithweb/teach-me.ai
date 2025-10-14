@@ -1,6 +1,11 @@
 const handleBtnClick = async () => {
     // send message to background.js, get the video done and come here..
-    await chrome.runtime.sendMessage({ isActive: true, url: window.location.href, name:"upload" });
+    chrome.runtime.sendMessage({ isActive: true, url: window.location.href, name: "upload" }, function (response) {
+        if(response.success){
+            alert("Done")
+            // Now here we can intigrate a btn or whatever to do further things..
+        }
+    });
 }
 
 const createBtn = () => {

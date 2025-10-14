@@ -5,6 +5,13 @@ const handleActiveTab = async (tabId) => {
     }
 }
 
+
+const videoUploaded = async (videoNo, url) => {
+    const videoId = url.split("?")[1].split("&")[0].split("=")[1]
+    await chrome.storage.session.set({ [videoId]: videoNo }) // Set the videoId and videoNo temporary in broser so as to if user stops or exit uknowingly so get it without going to backend
+    return videoNo
+}
+
 const handleUploadVid = async (url) => {
     const serverUrl = "https://unulcerous-unelating-andra.ngrok-free.dev"
     console.log("Started")
@@ -18,14 +25,15 @@ const handleUploadVid = async (url) => {
     })
     const res1 = await req1.json()
     if (res1?.success) {
-        if (res1?.exist){
-            // Since it exist for a long time, I think we can say it is parsed
-            console.log("Got video No")
-            console.log("Parsed..")
+        if (res1?.exist) {
+            // Since it exist for a long time, I think it is parsed
+            console.log("Video Exists")
+            const videoNo = res1?.video_no
+            videoUploaded(videoNo, url)
             return
         }
-        console.log("Got task id")
         const taskId = res1.task_id
+        console.log("Got task id")
         let videoNo;
 
         const isParse = async () => {
@@ -38,11 +46,13 @@ const handleUploadVid = async (url) => {
             })
             const res3 = await req3.json()
 
-            if(res3.success){
-                console.log("Parsed..") // In future, we may want to save url and videoNo in db to prevent duplicacy
+            if (res3.success) {
+                console.log("Video parsed")
+                videoUploaded(videoNo, url)
                 return
             }
-            setTimeout(() => isParse(), 3000);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            await isParse()
         }
 
         const getTask = async () => {
@@ -54,16 +64,19 @@ const handleUploadVid = async (url) => {
                 body: JSON.stringify({ taskId })
             })
             const res2 = await req2.json()
+            console.log("Ran")
             if (res2?.success && res2.video_no) {
-                console.log("Got video No")
                 videoNo = res2.video_no
+                console.log("Got video no")
                 // Check is it parsed?
                 await isParse()
                 return
             }
-            setTimeout(() => getTask(), 3000);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            await getTask();
         }
-        getTask()
+
+        await getTask()
     }
 }
 
@@ -74,7 +87,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg?.isActive && msg?.name == "upload") {
-        handleUploadVid(msg.url)
+    if (msg?.isActive && msg?.name === "upload") {
+        handleUploadVid(msg.url).then(() => {
+            console.log("Video is ready")
+            sendResponse({ success: true });
+        })
+        return true;
     }
-})
+});
