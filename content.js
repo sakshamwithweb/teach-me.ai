@@ -1,9 +1,32 @@
-const handleBtnClick = async () => {
-    // send message to background.js, get the video done and come here..
+const loadingBtn = (handleBtnClick) => {
+        const btn = document.getElementById("edu-ai");
+        if (!btn) return;
+
+        btn.removeEventListener("click", handleBtnClick);
+
+        btn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="22" height="22" style="display:block;margin:auto;">
+  <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4">
+    <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" from="0 25 25" to="360 25 25"/>
+  </circle>
+</svg>
+    `;
+};
+
+
+
+const handleAfterUpload = () => { }
+
+// send message to background.js, get the video done and come here..
+const handleBtnClick = () => {
+    // Start loading btn here
+    loadingBtn(handleBtnClick)
+
     chrome.runtime.sendMessage({ isActive: true, url: window.location.href, name: "upload" }, function (response) {
-        if(response.success){
+        if (response.success) {
             alert("Done")
-            // Now here we can intigrate a btn or whatever to do further things..
+            // Stop loading btn and intigrate a btn or whatever to do further things..
+            
         }
     });
 }
@@ -26,7 +49,7 @@ const createBtn = () => {
         right_ctrls.insertBefore(btn, right_ctrls.firstChild)
 
         const ourBtn = document.getElementById("edu-ai")
-        ourBtn.addEventListener("click", () => { handleBtnClick() })
+        ourBtn.addEventListener("click", handleBtnClick)
     }
 }
 
