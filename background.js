@@ -1,7 +1,24 @@
+const serverUrl = "https://unulcerous-unelating-andra.ngrok-free.dev"
+
+
 const handleActiveTab = async (tabId) => {
     const tab = await chrome.tabs.get(tabId);
     if (tab.url && tab.url.includes("youtube.com/watch")) {
         await chrome.tabs.sendMessage(tabId, { isActive: true });
+    }
+}
+
+const handleSendQuestion = async (videoId, question, timeInSec) => {
+    const req1 = await fetch(`${serverUrl}/user_question`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ videoId, question, timeInSec })
+    })
+    const res1 = await req1.json()
+    if (res1.success) {
+        return res1.questions
     }
 }
 
@@ -13,7 +30,6 @@ const videoUploaded = async (videoNo, url) => {
 }
 
 const handleUploadVid = async (url) => {
-    const serverUrl = "https://unulcerous-unelating-andra.ngrok-free.dev"
     console.log("Started")
     // Upload the video
     const req1 = await fetch(`${serverUrl}/upload`, { // It will initiate upload and give a task id
@@ -33,7 +49,7 @@ const handleUploadVid = async (url) => {
             return
         }
         const taskId = res1.task_id
-        console.log("Got task id")
+        console.log(`Got task id: ${taskId}`)
         let videoNo;
 
         const isParse = async () => {
@@ -80,12 +96,6 @@ const handleUploadVid = async (url) => {
     }
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === "complete" && tab.active && tab.url?.includes("youtube.com/watch")) {
-        handleActiveTab(tabId);
-    }
-});
-
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg?.isActive && msg?.name === "upload") {
         handleUploadVid(msg.url).then(() => {
@@ -93,5 +103,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ success: true });
         })
         return true;
+    } else if (msg?.name === "question") {
+        videoId = msg.url.split("?")[1].split("&")[0].split("=")[1]
+        question = msg.question
+        timeInSec = msg.time
+        handleSendQuestion(videoId, question, timeInSec).then((questions) => {
+            console.log("Questions are ready")
+            sendResponse({ success: true, questions: questions });
+        })
+        return true;
+    }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "complete" && tab.active && tab.url?.includes("youtube.com/watch")) {
+        handleActiveTab(tabId);
     }
 });
