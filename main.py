@@ -115,7 +115,6 @@ def user_question():
 
     # Make questions for user based on time and question
     prompt = f"""I am making an edtech software that simulates like being a professor in zoom through an extension, when user watch any study related video and got any doubt, it presses a button exist in bottom right, then my AI reads whole video and explains to user. After user presses the btn, we ask for where the doubt is means time and what doubt. Now we know what user had doubt and where but suppose now I generate a general answer and give to user, what if one already knows many things what I have told, what if one feels very high level of what I am telling and need detailed info? For this reason, I need to know already what user knows and what user doesn't know. Based on timestamp and doubt user have, I want you to give me 1-3 questions that I will ask user to know level of understanding user currently possess relative to what doubt it has (So as to we can look at the answer user give and know how much he knows). Give an array just, **no Markdown or any extra text**. Remember, The question must be small and lightweight such that user feel it netural rather than a mini test.\nTime: {time_in_sec} sec\nQuestion: {question}"""
-    print(prompt)
     
     req = requests.post(
         "https://api.memories.ai/serve/api/v1/chat",
@@ -126,7 +125,38 @@ def user_question():
         },
         stream=False
     )
-    print(req.json()['data']['content'])
     questions = json.loads(req.json()["data"]["content"])
+    session_id = req.json()["data"]["session_id"]
 
-    return {"success": True, "questions": questions}
+    return {"success": True, "questions": questions, "session_id": session_id}
+
+
+@app.route("/user_answer", methods=['POST'])
+@cross_origin()
+def user_answer():
+    payload = dict(request.json)
+    # Got answers, questions, userQuestion, time and session_id.
+    answers = payload["answers"]
+    questions = payload["questions"]
+    userQuestion = payload["userQuestion"]
+    time = payload["time"]
+    session_id = payload["session_id"] # I think it doesn't work
+    video_no = video_collection.find_one({"video_id": payload['videoId']})['video_no']
+
+    # Now in tha same session, tell to ai that we asked these questions and got these answers so based on it, get the level of understanding user have and answer user's doubt through CMDs
+    prompt = f"""In previous chat I had said this: `I am making an edtech software that simulates like being a professor in zoom through an extension, when user watch any study related video and got any doubt, it presses a button exist in bottom right, then my AI reads whole video and explains to user. After user presses the btn, we ask for where the doubt is means time and what doubt. Now we know what user had doubt and where but suppose now I generate a general answer and give to user, what if one already knows many things what I have told, what if one feels very high level of what I am telling and need detailed info? For this reason, I need to know already what user knows and what user doesn't know. Based on timestamp and doubt user have, I want you to give me 1-3 questions that I will ask user to know level of understanding user currently possess relative to what doubt it has (So as to we can look at the answer user give and know how much he knows). Give an array just, **no Markdown or any extra text**. Remember, The question must be small and lightweight such that user feel it netural rather than a mini test.\nTime: {time} sec\nQuestion: {userQuestion}`, you gave me these questions: {questions} and I asked to user and user gave these answers: {answers}\n\nSo Now based on the answers user gave of teh questions you had asked, determine the level of understanding user possess relative to what doubt it has asked and do this: Give a text explain based on level of understanding that must answer user's doubt"""
+
+    req = requests.post(
+        "https://api.memories.ai/serve/api/v1/chat",
+        headers=headers,
+        json={
+            "video_nos": [video_no],
+            "prompt": prompt
+            # "session_id":session_id
+        },
+        stream=False
+    )
+
+    print(req.json()["data"]["content"])
+
+    return {"success": True}
