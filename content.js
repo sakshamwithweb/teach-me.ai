@@ -1,64 +1,136 @@
-// Make a btn, if clicked give option to select time or concept whcih user can't understand
-const handleAfterUpload = () => {
+
+const startAIBtnLoading = (eventFunc) => { // Remove click event listener and start loading
     const btn = document.getElementById("edu-ai")
-    btn.innerHTML = `<svg width="90%" height="90%" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    btn.removeEventListener("click", eventFunc);
+    btn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="22" height="22" style="display:block;margin:auto;">
+        <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4">
+            <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" from="0 25 25" to="360 25 25"/>
+        </circle>
+    </svg>
+    `
+}
+
+const stopAIBtnLoading = (eventFunc) => {
+    const btn = document.getElementById("edu-ai")
+    btn.innerHTML = `
+    <svg width="90%" height="90%" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
         <rect width="36" height="36" fill="transparent" />
-        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif"
-            font-size="14" fill="#fff" font-weight="bold">
+        <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#fff" font-weight="bold">
             AI
         </text>
     </svg>`
-    btn.addEventListener("click", () => {
-        // Disable btn click now.. (Have to dooooooooooooooooooo
+    btn.addEventListener("click", eventFunc)
+}
 
-        // In the side of video wherever we get place, show a dialog and ask to select time and then let user input its question then send to server.. 
 
-        // Create the dialog box
-        const dialogBox = document.createElement("div");
-        dialogBox.classList.add("teach-me-ai-dialog");
-
-        const p = document.createElement("p")
-        p.innerText = "In video, stay in the time of what you can't understand then click next"
-        dialogBox.appendChild(p)
-        const btn = document.createElement("button")
-        btn.innerText = "Next"
-        let time;
-        btn.addEventListener("click", () => {
-            time = document.getElementsByClassName('video-stream')[0].currentTime
-            // Go to next section where we et ser ask its qustion
-            const label = document.createElement("label")
-            label.setAttribute("for", "question")
-            label.innerText = "Your Question:"
-            const input = document.createElement("input")
-            input.setAttribute("type", "text")
-            input.setAttribute("id", "question")
-            input.setAttribute("name", "question")
-            const submitBtn = document.createElement("button")
-            submitBtn.innerText = "Done"
-            submitBtn.addEventListener("click", async (e) => {
-                e.preventDefault();
-                // After Done btn is clicked, remove the dialog and show the loading again..
-
-                const question = input.value
-
-                chrome.runtime.sendMessage({ isActive: true, url: window.location.href, question: question, time: time, name: "question" }, function (response) {
-                    const questions = response?.questions
-                    // Got questions here, Now ask to user, get the answer and send to background.js then to server
-                });
-            })
+const handleAskQuestion = async (questions, question, time, session_id) => { // Got questions, ask to user, get the answers and send back to server
+    // Create a dialog like you created prev time where ask 1-3 questions, probably do map.
+    const questionPanel = (question) => {
+        // Create a dialog here where add question dynamically and return answer
+        return new Promise((resolve) => {
+            const dialogBox = document.createElement("div");
+            dialogBox.classList.add("teach-me-ai-dialog");
+            const p = document.createElement("p")
+            p.innerText = question
+            dialogBox.appendChild(p)
             const form = document.createElement("form")
-            form.appendChild(label)
-            form.appendChild(input)
-            form.appendChild(submitBtn)
-            form.classList.add("teach-me-ai-dialog")
-            dialogBox.innerHTML = ""
-            dialogBox.appendChild(form)
-        })
-        dialogBox.appendChild(btn)
+            const input = document.createElement("input")
+            form.append(input)
+            const nextBtn = document.createElement("button")
+            nextBtn.innerHTML = `&#8250;`
+            nextBtn.style.borderRadius = "50%";
+            form.append(nextBtn)
 
-        document.body.appendChild(dialogBox);
-        const style = document.createElement("style");
-        style.innerHTML = `
+
+            const handleNextBtnClick = (value, dialogBox) => {
+                // Take the answer, store somewhere and remove the dialog
+                dialogBox.remove()
+                resolve(value)
+            }
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                handleNextBtnClick(input.value.trim(), dialogBox)
+            });
+            nextBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                handleNextBtnClick(input.value.trim(), dialogBox)
+            });
+
+
+            dialogBox.append(form)
+            document.body.appendChild(dialogBox);
+            input.focus();
+        })
+    }
+
+    let answers = []
+    for (const question of questions) {
+        const answer = await questionPanel(question)
+        answers.push(answer)
+    }
+    console.log("All questions are answered")
+    console.log(answers)
+
+    // Send the answer to the server
+    chrome.runtime.sendMessage({ isActive: true, name: "userAnswerOfQuestion", answers: answers, questions: questions, userQuestion: question, time: time, session_id: session_id, url: window.location.href }, function (response) {
+        // After answer is sent, we expect this in from server: Server will take: questions and their answers, user doubt and time. By this all generate cmds to teach to user :)
+    });
+}
+
+
+const handleAskUserDoubt = () => { // Video is uploaded and ai btn is clicked means user wanna ask doubt, get the doubt and timestamp, send to server and get the questions.
+    // show loading btn
+    startAIBtnLoading(handleAskUserDoubt)
+
+    // Create the dialog box
+    const dialogBox = document.createElement("div");
+    dialogBox.classList.add("teach-me-ai-dialog");
+
+    const p = document.createElement("p")
+    p.innerText = "In video, stay in the time of what you can't understand then click next"
+    dialogBox.appendChild(p)
+    const nextBtn = document.createElement("button")
+    nextBtn.innerText = "Next"
+    let time;
+    nextBtn.addEventListener("click", () => {
+        time = document.getElementsByClassName('video-stream')[0].currentTime
+        // Go to next section where we ask its doubt
+        const label = document.createElement("label")
+        label.setAttribute("for", "question")
+        label.innerText = "Your Question:"
+        const input = document.createElement("input")
+        input.setAttribute("type", "text")
+        input.setAttribute("id", "question")
+        input.setAttribute("name", "question")
+        const submitBtn = document.createElement("button")
+        submitBtn.innerText = "Done"
+        submitBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            // After Done btn is clicked, remove the dialog and send to server..
+            dialogBox.remove()
+
+            const question = input.value
+            chrome.runtime.sendMessage({ isActive: true, url: window.location.href, question: question, time: time, name: "question" }, function (response) {
+                const questions = response?.questions
+                const session_id = response?.session_id // give this session id with user answer..
+                // Got questions here, make a dialog like where ask questions to user then get the answer and send to server back
+                handleAskQuestion(questions, question, time, session_id) // Also need question and time because later we will send it to server with answers
+            });
+        })
+        const form = document.createElement("form")
+        form.appendChild(label)
+        form.appendChild(input)
+        form.appendChild(submitBtn)
+        form.classList.add("teach-me-ai-dialog")
+        dialogBox.innerHTML = ""
+        dialogBox.appendChild(form)
+    })
+    dialogBox.appendChild(nextBtn)
+
+    document.body.appendChild(dialogBox);
+    const style = document.createElement("style");
+    style.innerHTML = `
 .teach-me-ai-dialog button{
     padding: 8px;
     border-radius:7px;
@@ -101,32 +173,27 @@ const handleAfterUpload = () => {
 }
 `;
 
-        document.head.appendChild(style);
-    })
+    document.head.appendChild(style);
+
 }
 
-const handleInitBtnClick = () => {
+
+const handleInitBtnClick = () => { // AI btn is clicked, now upload video
     // Start loading btn here
     const btn = document.getElementById("edu-ai");
     if (!btn) return;
-    btn.removeEventListener("click", handleInitBtnClick);
-    btn.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="22" height="22" style="display:block;margin:auto;">
-  <circle cx="25" cy="25" r="20" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="31.4 31.4">
-    <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" from="0 25 25" to="360 25 25"/>
-  </circle>
-</svg>
-    `;
+    startAIBtnLoading(handleInitBtnClick)
 
     chrome.runtime.sendMessage({ isActive: true, url: window.location.href, name: "upload" }, function (response) {
         if (response.success) {
-            // Stop loading btn and intigrate a btn or whatever to do further things..
-            handleAfterUpload()
+            // After video is uploaded, remove loading and add an ai btn, if clicked, call handleAskUserDoubt
+            stopAIBtnLoading(handleAskUserDoubt)
         }
     });
 }
 
-const createInitBtn = () => {
+
+const createInitBtn = () => { // AI btn is created at first
     const btnExists = document.getElementById("edu-ai")
     if (!btnExists) {
         const right_ctrls = document.getElementsByClassName("ytp-right-controls")[0]
@@ -147,6 +214,7 @@ const createInitBtn = () => {
         ourBtn.addEventListener("click", handleInitBtnClick)
     }
 }
+
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg?.isActive) {

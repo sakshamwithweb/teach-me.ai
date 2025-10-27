@@ -8,7 +8,21 @@ const handleActiveTab = async (tabId) => {
     }
 }
 
-const handleSendQuestion = async (videoId, question, timeInSec) => {
+
+const handleSendUserAnswer = async (answers, questions, userQuestion, time, session_id, videoId) => {
+    // Send to server
+    const req = await fetch(`${serverUrl}/user_answer`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({answers, questions, userQuestion, time, session_id, videoId})
+    })
+    const res = await req.json()
+}
+
+
+const handleSendUserQuestion = async (videoId, question, timeInSec) => {
     const req1 = await fetch(`${serverUrl}/user_question`, {
         method: 'POST',
         headers: {
@@ -18,7 +32,7 @@ const handleSendQuestion = async (videoId, question, timeInSec) => {
     })
     const res1 = await req1.json()
     if (res1.success) {
-        return res1.questions
+        return res1
     }
 }
 
@@ -28,6 +42,7 @@ const videoUploaded = async (videoNo, url) => {
     await chrome.storage.session.set({ [videoId]: videoNo }) // Set the videoId and videoNo temporary in broser so as to if user stops or exit uknowingly so get it without going to backend
     return videoNo
 }
+
 
 const handleUploadVid = async (url) => {
     console.log("Started")
@@ -96,6 +111,7 @@ const handleUploadVid = async (url) => {
     }
 }
 
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg?.isActive && msg?.name === "upload") {
         handleUploadVid(msg.url).then(() => {
@@ -104,12 +120,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         })
         return true;
     } else if (msg?.name === "question") {
-        videoId = msg.url.split("?")[1].split("&")[0].split("=")[1]
+        const videoId = msg.url.split("?")[1].split("&")[0].split("=")[1]
         question = msg.question
         timeInSec = msg.time
-        handleSendQuestion(videoId, question, timeInSec).then((questions) => {
+        handleSendUserQuestion(videoId, question, timeInSec).then((res) => {
             console.log("Questions are ready")
-            sendResponse({ success: true, questions: questions });
+            sendResponse({ success: true, questions: res.questions, session_id: res.session_id});
+        })
+        return true;
+    } else if (msg?.name === "userAnswerOfQuestion") {
+        // answers, questions, userQuestion and time
+        const answers = msg.answers
+        const questions = msg.questions
+        const userQuestion = msg.userQuestion
+        const time = msg.time
+        const session_id = msg.session_id
+        const videoId = msg.url.split("?")[1].split("&")[0].split("=")[1]
+
+        handleSendUserAnswer(answers, questions, userQuestion, time, session_id, videoId).then(() => {
+            console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            sendResponse({success:true})
         })
         return true;
     }
