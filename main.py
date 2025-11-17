@@ -7,6 +7,9 @@ import redis
 from pymongo import MongoClient
 from youtube_extractor import extract_video_id_from_url
 import json
+from parser import cmd_parse, parsed_cmd_to_browser_cmds
+from lib.get_explaination_cmd import get_explaination_cmd
+from json_repair import repair_json
 
 load_dotenv()
 
@@ -135,28 +138,29 @@ def user_question():
 @cross_origin()
 def user_answer():
     payload = dict(request.json)
-    # Got answers, questions, userQuestion, time and session_id.
+    # Got answers, questions, user_question, time and session_id.
     answers = payload["answers"]
     questions = payload["questions"]
-    userQuestion = payload["userQuestion"]
+    user_question = payload["userQuestion"]
     time = payload["time"]
-    session_id = payload["session_id"] # I think it doesn't work
+    session_id = payload["session_id"] # I think it doesn't work (Can be working, need to check..)
     video_no = video_collection.find_one({"video_id": payload['videoId']})['video_no']
 
     # Now in tha same session, tell to ai that we asked these questions and got these answers so based on it, get the level of understanding user have and answer user's doubt through CMDs
-    prompt = f"""In previous chat I had said this: `I am making an edtech software that simulates like being a professor in zoom through an extension, when user watch any study related video and got any doubt, it presses a button exist in bottom right, then my AI reads whole video and explains to user. After user presses the btn, we ask for where the doubt is means time and what doubt. Now we know what user had doubt and where but suppose now I generate a general answer and give to user, what if one already knows many things what I have told, what if one feels very high level of what I am telling and need detailed info? For this reason, I need to know already what user knows and what user doesn't know. Based on timestamp and doubt user have, I want you to give me 1-3 questions that I will ask user to know level of understanding user currently possess relative to what doubt it has (So as to we can look at the answer user give and know how much he knows). Give an array just, **no Markdown or any extra text**. Remember, The question must be small and lightweight such that user feel it netural rather than a mini test.\nTime: {time} sec\nQuestion: {userQuestion}`, you gave me these questions: {questions} and I asked to user and user gave these answers: {answers}\n\nSo Now based on the answers user gave of teh questions you had asked, determine the level of understanding user possess relative to what doubt it has asked and do this: Give a text explain based on level of understanding that must answer user's doubt"""
 
-    req = requests.post(
-        "https://api.memories.ai/serve/api/v1/chat",
-        headers=headers,
-        json={
-            "video_nos": [video_no],
-            "prompt": prompt
-            # "session_id":session_id
-        },
-        stream=False
-    )
+    actions = {
+        "<Say text=''>": "Speak to user",
+        "<Pause>": "Pause video",
+        "<Play>": "Play video",
+        "<Mute>": "Mue video",
+        "<Unmute>": "Unmute video"
+    }
 
-    print(req.json()["data"]["content"])
+    llm_brokn_response = get_explaination_cmd(headers, video_no, questions, time, answers, user_question, actions)
+    response = repair_json(llm_brokn_response)    
+    raw_cmds = json.loads(response)["commands"]
+    parsed_cmd = cmd_parse(raw_cmds) # Now we got actions we gotta do, lets convert those cmds to browser friendly cmds then send to client.
+    browser_cmd = parsed_cmd_to_browser_cmds(parsed_cmd)
 
-    return {"success": True}
+    return {"success": True, "browser_cmd": browser_cmd}
+

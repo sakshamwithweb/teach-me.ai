@@ -1,0 +1,9 @@
+flask
+requests
+dotenv
+flask_cors
+redis
+pymongo
+youtube_extractor
+lark
+json_repair
