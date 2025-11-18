@@ -7,7 +7,7 @@ import redis
 from pymongo import MongoClient
 from youtube_extractor import extract_video_id_from_url
 import json
-from parser import cmd_parse, parsed_cmd_to_browser_cmds
+from parser import cmd_parse
 from lib.get_explaination_cmd import get_explaination_cmd
 from json_repair import repair_json
 
@@ -160,7 +160,6 @@ def user_answer():
     response = repair_json(llm_brokn_response)    
     raw_cmds = json.loads(response)["commands"]
     parsed_cmd = cmd_parse(raw_cmds) # Now we got actions we gotta do, lets convert those cmds to browser friendly cmds then send to client.
-    browser_cmd = parsed_cmd_to_browser_cmds(parsed_cmd)
 
-    return {"success": True, "browser_cmd": browser_cmd}
+    return {"success": True, "cmds": parsed_cmd}
 

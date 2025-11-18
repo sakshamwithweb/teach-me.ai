@@ -55,45 +55,9 @@ class CommandTransformer(Transformer):
         return items
 
 
-class Browser():
-    def say(self, text):
-        # Func to say..
-        return f"window.speechSynthesis.speak(new SpeechSynthesisUtterance('{text}'));"
-    
-    def pause(self):
-        # Pause YT video
-        return "document.querySelector('video').pause();"
-    
-    def play(self):
-        # Play the YT video
-        return "document.querySelector('video').play();"
-    
-    def mute(self):
-        # Mute the YT video
-        return "document.getElementsByClassName('ytp-volume-icon')[0].click();"
-    
-    def unmute(self):
-        # Unmute the YT video
-        return "document.getElementsByClassName('ytp-volume-icon')[0].click();"
-
-
-
 def cmd_parse(code):
     parser = Lark(grammar, start="start")
     transformer = CommandTransformer()
     tree = parser.parse(code)
     result = transformer.transform(tree)
     return result
-
-def parsed_cmd_to_browser_cmds(parsed_cmd):
-    # Make a pip module for converting youtube cmd to html code
-    # _____TODO:Use time here, either teleport or whatever you want. Do it.. ___________
-    browser = Browser()
-    browser_cmds = []
-    for cmd in parsed_cmd:
-        func = getattr(browser, cmd["function"].lower())
-        params = cmd["params"]
-
-        result = func() if(len(params) == 0) else func(*list(params.values()))
-        browser_cmds.append(result)
-    return browser_cmds
