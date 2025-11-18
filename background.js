@@ -16,9 +16,12 @@ const handleSendUserAnswer = async (answers, questions, userQuestion, time, sess
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({answers, questions, userQuestion, time, session_id, videoId})
+        body: JSON.stringify({ answers, questions, userQuestion, time, session_id, videoId })
     })
     const res = await req.json()
+    if (res.success){
+        return res
+    }
 }
 
 
@@ -125,7 +128,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         timeInSec = msg.time
         handleSendUserQuestion(videoId, question, timeInSec).then((res) => {
             console.log("Questions are ready")
-            sendResponse({ success: true, questions: res.questions, session_id: res.session_id});
+            sendResponse({ success: true, questions: res.questions, session_id: res.session_id });
         })
         return true;
     } else if (msg?.name === "userAnswerOfQuestion") {
@@ -137,9 +140,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const session_id = msg.session_id
         const videoId = msg.url.split("?")[1].split("&")[0].split("=")[1]
 
-        handleSendUserAnswer(answers, questions, userQuestion, time, session_id, videoId).then(() => {
-            console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-            sendResponse({success:true})
+        handleSendUserAnswer(answers, questions, userQuestion, time, session_id, videoId).then((res) => {
+            sendResponse({ success: true, cmds: res.cmds })
         })
         return true;
     }

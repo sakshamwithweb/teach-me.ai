@@ -24,6 +24,37 @@ const stopAIBtnLoading = (eventFunc) => {
 }
 
 
+const handleTeach = async (cmds) => {
+    // Here follow cmds and teach to usr
+    const { Browser } = await import(chrome.runtime.getURL("/cmds.js"))
+    const browser = new Browser()
+    await Promise.all(cmds.map((cmd, index) => {
+        // Here wait for the time then do the action and resolve
+        return new Promise((resolve, reject) => {
+            try {
+                const handleTimeUpdate = (e) => {
+                    if (Math.abs(cmd.time - e.target.currentTime) < 0.5) {
+                        console.log(index)
+                        // remove event listener to prevent duplicacy
+                        document.getElementsByClassName('video-stream')[0].removeEventListener("timeupdate", handleTimeUpdate)
+
+                        // Take the action
+                        const funcName = cmd.function.toLowerCase()
+                        browser[funcName](...Object.values(cmd.params))
+
+                        resolve(true)
+                    }
+                }
+                document.getElementsByClassName('video-stream')[0].addEventListener("timeupdate", handleTimeUpdate)
+            } catch (error) {
+                reject(false)
+            }
+        })
+    }))
+    stopAIBtnLoading()
+}
+
+
 const handleAskQuestion = async (questions, question, time, session_id) => { // Got questions, ask to user, get the answers and send back to server
     // Create a dialog like you created prev time where ask 1-3 questions, probably do map.
     const questionPanel = (question) => {
@@ -75,6 +106,11 @@ const handleAskQuestion = async (questions, question, time, session_id) => { // 
     // Send the answer to the server
     chrome.runtime.sendMessage({ isActive: true, name: "userAnswerOfQuestion", answers: answers, questions: questions, userQuestion: question, time: time, session_id: session_id, url: window.location.href }, function (response) {
         // After answer is sent, we expect this in from server: Server will take: questions and their answers, user doubt and time. By this all generate cmds to teach to user :)
+        if (response.success) {
+            alert("Got cmds!")
+            console.log(response)
+            handleTeach(response?.cmds)
+        }
     });
 }
 
